@@ -5790,7 +5790,7 @@ ProtocolVersion MakeDTLSv1_2(void)
 
         return (word32) mqxTime.SECONDS;
     }
-#elif defined(FREESCALE_FREE_RTOS) || defined(FREESCALE_KSDK_FREERTOS)
+#elif defined(FREESCALE_FREE_RTOS) || defined(FREESCALE_KSDK_FREERTOS) || defined(NXP_SDK)
 
     #include "include/task.h"
 

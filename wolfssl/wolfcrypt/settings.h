@@ -56,7 +56,7 @@
 /* #define WOLFSSL_MICROCHIP_PIC32MZ */
 
 /* Uncomment next line if using FreeRTOS */
-/* #define FREERTOS */
+#define FREERTOS
 
 /* Uncomment next line if using FreeRTOS+ TCP */
 /* #define FREERTOS_TCP */
@@ -68,7 +68,7 @@
 /* #define EBSNET */
 
 /* Uncomment next line if using lwip */
-/* #define WOLFSSL_LWIP */
+#define WOLFSSL_LWIP
 
 /* Uncomment next line if building wolfSSL for a game console */
 /* #define WOLFSSL_GAME_BUILD */
@@ -87,6 +87,9 @@
 
 /* Uncomment next line if building for Freescale KSDK FreeRTOS (old name FREESCALE_FREE_RTOS) */
 /* #define FREESCALE_KSDK_FREERTOS */
+
+/* Uncomment next line if building for NXP MPC57xx SDK */
+/* #define NXP_SDK_MPC57xx */
 
 /* Uncomment next line if using STM32F2 */
 /* #define WOLFSSL_STM32F2 */
@@ -958,6 +961,44 @@ extern void uITRON4_free(void *p) ;
 /* if LTC has AES engine but doesn't have GCM, use software with LTC AES ECB mode */
 #if defined(FREESCALE_USE_LTC) && !defined(FREESCALE_LTC_AES_GCM)
     #define GCM_TABLE
+#endif
+
+#ifdef NXP_SDK_MPC57xx
+    #ifndef FREERTOS
+    #error FREERTOS is required for NXP_SDK_MPC57xx
+    #endif
+
+    #ifndef NO_FILESYSTEM
+    #error NO_FILESYSTEM is required for NXP_SDK_MPC57xx
+    #endif
+
+    #ifndef NXP_SDK
+    #define NXP_SDK
+    #endif
+
+    #ifndef WOLFSSL_LWIP
+    #define WOLFSSL_LWIP
+    #endif
+
+    #define WOLFSSL_GENERAL_ALIGNMENT  4
+
+    #define NXP_SDK_HSM
+    #define HSM_TIMEOUT 100
+    #define NXP_SDK_RTC_C55
+
+    #define BIG_ENDIAN_ORDER
+    #define SIZEOF_LONG_LONG 8
+    #define SIZEOF_LONG 4
+    #define NO_WRITEV
+    #define NO_DEV_RANDOM
+
+    #ifdef SINGLE_THREADED
+    #undef SINGLE_THREADED
+    #include "semphr.h"
+    #endif
+
+    #define AES_MAX_KEY_SIZE    128
+
 #endif
 
 #ifdef WOLFSSL_STM32F2
