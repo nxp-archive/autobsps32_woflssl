@@ -770,6 +770,9 @@
         }
     #endif /* HAVE_AES_DECRYPT */
 
+#elif defined(NXP_SDK_HSM)
+    #include "hsm_driver.h"
+
 #else
 
     /* using wolfCrypt software AES implementation */
@@ -2233,6 +2236,24 @@ int wc_AesSetIV(Aes* aes, const byte* iv)
             LTC_AES_DecryptEcb(LTC_BASE, in, out, AES_BLOCK_SIZE,
                 key, keySize, kLTC_EncryptKey);
         }
+    #elif defined(NXP_SDK_HSM)
+        void wc_AesEncryptDirect(Aes* aes, byte* out, const byte* in)
+        {
+            if (STATUS_SUCCESS == HSM_DRV_LoadPlainKey((uint8_t*)aes->key, HSM_TIMEOUT))
+            {
+                HSM_DRV_EncryptECB(HSM_RAM_KEY, in, AES_BLOCK_SIZE, out, HSM_TIMEOUT);
+            }
+       }
+
+        #ifdef HAVE_AES_DECRYPT
+        void wc_AesDecryptDirect(Aes* aes, byte* out, const byte* in)
+        {
+            if (STATUS_SUCCESS == HSM_DRV_LoadPlainKey((uint8_t*)aes->key, HSM_TIMEOUT))
+            {
+                HSM_DRV_DecryptECB(HSM_RAM_KEY, (uint8_t*)in, AES_BLOCK_SIZE, out, HSM_TIMEOUT);
+            }
+        }
+        #endif /* HAVE_AES_DECRYPT */
 
     #else
         /* Allow direct access to one block encrypt */
@@ -2798,6 +2819,48 @@ int wc_AesSetIV(Aes* aes, const byte* iv)
             aes->key_ce, aes->keylen, aes->iv_ce, AES_BLOCK_SIZE,
             out, in, sz, PIC32_DECRYPTION,
             PIC32_ALGO_AES, PIC32_CRYPTOALGO_RCBC);
+    }
+    #endif /* HAVE_AES_DECRYPT */
+
+#elif defined(NXP_SDK_HSM)
+
+    int wc_AesCbcEncrypt(Aes* aes, byte* out, const byte* in, word32 sz)
+    {
+        int ret = 0;
+        if (STATUS_SUCCESS != HSM_DRV_LoadPlainKey((uint8_t*)aes->key, HSM_TIMEOUT))
+        {
+            return WC_TIMEOUT_E;
+        }
+
+        if (STATUS_SUCCESS != HSM_DRV_EncryptCBC(HSM_RAM_KEY, in, sz,
+                                                    (uint8_t*)aes->reg, out, HSM_TIMEOUT))
+        {
+            ret = WC_TIMEOUT_E;
+        }
+        /* store iv for next call */
+        XMEMCPY(aes->reg, out + sz - AES_BLOCK_SIZE, AES_BLOCK_SIZE);
+
+        return ret;
+    }
+    #ifdef HAVE_AES_DECRYPT
+    int wc_AesCbcDecrypt(Aes* aes, byte* out, const byte* in, word32 sz)
+    {
+        int ret = 0;
+
+        if (STATUS_SUCCESS != HSM_DRV_LoadPlainKey((uint8_t*)aes->key, HSM_TIMEOUT))
+        {
+            return WC_TIMEOUT_E;
+        }
+
+        if (STATUS_SUCCESS != HSM_DRV_DecryptCBC(HSM_RAM_KEY, (uint8_t*)in, sz,
+                                        (uint8_t*)aes->reg, out, HSM_TIMEOUT))
+        {
+            ret = WC_TIMEOUT_E;
+        }
+        /* store iv for next call */
+        XMEMCPY(aes->reg, out + sz - AES_BLOCK_SIZE, AES_BLOCK_SIZE);
+
+        return ret;
     }
     #endif /* HAVE_AES_DECRYPT */
 

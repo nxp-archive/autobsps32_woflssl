@@ -46,6 +46,10 @@
     #include <wolfssl/wolfcrypt/port/nxp/ksdk_port.h>
 #endif
 
+#if defined(NXP_SDK)
+    #include <wolfcrypt/src/port/nxp/sdk_port.c>
+#endif
+
 #ifdef WOLFSSL_ATMEL
     #include <wolfssl/wolfcrypt/port/atmel/atmel.h>
 #endif
@@ -124,6 +128,14 @@ int wolfCrypt_Init(void)
         }
     #endif
 
+    #if defined(NXP_SDK)
+        ret = nxp_sdk_port_init();
+        if (ret != 0) {
+            WOLFSSL_MSG("NXP SDK port init failed");
+            return ret;
+        }
+    #endif
+
     #ifdef WOLFSSL_ATMEL
         atmel_init();
     #endif
@@ -187,6 +199,10 @@ int wolfCrypt_Cleanup(void)
 
     #ifdef WOLFSSL_ASYNC_CRYPT
         wolfAsync_HardwareStop();
+    #endif
+
+    #if defined(NXP_SDK)
+        nxp_sdk_port_cleanup();
     #endif
 
         initRefCount = 0; /* allow re-init */
