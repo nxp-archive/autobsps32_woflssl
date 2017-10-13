@@ -26,9 +26,9 @@
 int nxp_sdk_port_init(void);
 void nxp_sdk_port_cleanup(void);
 
-#if defined(NXP_SDK_RTC_C55)
+#if defined(NXP_SDK_RTC_C55) || defined(NXP_SDK_RTC_S32K)
 uint32_t nxp_sdk_rtc_time(void);
-#endif /* NXP_SDK_RTC_C55 */
+#endif /* NXP_SDK_RTC_C55 || NXP_SDK_RTC_S32K */
 
 
 #endif /* _NXP_SDK_PORT_H_ */

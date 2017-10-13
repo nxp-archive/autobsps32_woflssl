@@ -168,7 +168,7 @@ ASN Options:
     #endif
     #define XGMTIME(c, t)   gmtime((c))
 
-#elif defined(NXP_SDK_RTC_C55)
+#elif defined(NXP_SDK_RTC_C55) || defined(NXP_SDK_RTC_S32K)
     #include <wolfssl/wolfcrypt/port/nxp/sdk_port.h>
 
     #define WOLFSSL_GMTIME

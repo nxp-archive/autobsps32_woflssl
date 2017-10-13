@@ -103,6 +103,10 @@ STATIC INLINE word32 ByteReverseWord32(word32 value)
     /* 5 instructions with rotate instruction, 9 without */
     return (rotrFixed(value, 8U) & 0xff00ff00) |
            (rotlFixed(value, 8U) & 0x00ff00ff);
+#elif defined(NXP_SDK)
+    register word32 r;
+    REV_BYTES_32(value, r);
+    return r;
 #else
     /* 6 instructions with rotate instruction, 8 without */
     value = ((value & 0xFF00FF00) >> 8) | ((value & 0x00FF00FF) << 8);
