@@ -31,7 +31,6 @@
 #include <wolfssl/wolfcrypt/aes.h>
 #include <wolfssl/wolfcrypt/cpuid.h>
 
-
 /* fips wrapper calls, user can call direct */
 #ifdef HAVE_FIPS
     int wc_AesSetKey(Aes* aes, const byte* key, word32 len, const byte* iv,
@@ -772,6 +771,9 @@
 
 #elif defined(NXP_SDK_HSM)
     #include "hsm_driver.h"
+
+#elif defined(NXP_SDK_CSEC)
+    #include "csec_driver.h"
 
 #else
 
@@ -2118,6 +2120,8 @@ static void wc_AesDecrypt(Aes* aes, const byte* inBlock, byte* outBlock)
     #else
         (void)dir;
     #endif /* HAVE_AES_DECRYPT */
+#else
+    (void)dir;
 #endif /* NEED_AES_TABLES */
 
         return wc_AesSetIV(aes, iv);
@@ -2239,7 +2243,15 @@ int wc_AesSetIV(Aes* aes, const byte* iv)
     #elif defined(NXP_SDK_HSM)
         void wc_AesEncryptDirect(Aes* aes, byte* out, const byte* in)
         {
-            if (STATUS_SUCCESS == HSM_DRV_LoadPlainKey((uint8_t*)aes->key, HSM_TIMEOUT))
+            uint8_t* pKey;
+#ifdef LITTLE_ENDIAN_ORDER
+            word32 key[4];
+            ByteReverseWords(key, aes->key, 16);
+            pKey = (uint8_t*)key;
+#else
+            pKey = (uint8_t*)aes->key;
+#endif
+            if (STATUS_SUCCESS == HSM_DRV_LoadPlainKey(pKey, HSM_TIMEOUT))
             {
                 HSM_DRV_EncryptECB(HSM_RAM_KEY, in, AES_BLOCK_SIZE, out, HSM_TIMEOUT);
             }
@@ -2248,9 +2260,52 @@ int wc_AesSetIV(Aes* aes, const byte* iv)
         #ifdef HAVE_AES_DECRYPT
         void wc_AesDecryptDirect(Aes* aes, byte* out, const byte* in)
         {
-            if (STATUS_SUCCESS == HSM_DRV_LoadPlainKey((uint8_t*)aes->key, HSM_TIMEOUT))
+            uint8_t* pKey;
+#ifdef LITTLE_ENDIAN_ORDER
+            word32 key[4];
+            ByteReverseWords(key, aes->key, 16);
+            pKey = (uint8_t*)key;
+#else
+            pKey = (uint8_t*)aes->key;
+#endif
+            if (STATUS_SUCCESS == HSM_DRV_LoadPlainKey(pKey, HSM_TIMEOUT))
             {
                 HSM_DRV_DecryptECB(HSM_RAM_KEY, (uint8_t*)in, AES_BLOCK_SIZE, out, HSM_TIMEOUT);
+            }
+        }
+        #endif /* HAVE_AES_DECRYPT */
+
+    #elif defined(NXP_SDK_CSEC)
+        void wc_AesEncryptDirect(Aes* aes, byte* out, const byte* in)
+        {
+            uint8_t* pKey;
+#ifdef LITTLE_ENDIAN_ORDER
+            word32 key[4];
+            ByteReverseWords(key, aes->key, 16);
+            pKey = (uint8_t*)key;
+#else
+            pKey = (uint8_t*)aes->key;
+#endif
+            if (STATUS_SUCCESS == CSEC_DRV_LoadPlainKey(pKey))
+            {
+                CSEC_DRV_EncryptECB(CSEC_RAM_KEY, in, AES_BLOCK_SIZE, out, CSEC_TIMEOUT);
+            }
+       }
+
+        #ifdef HAVE_AES_DECRYPT
+        void wc_AesDecryptDirect(Aes* aes, byte* out, const byte* in)
+        {
+            uint8_t* pKey;
+#ifdef LITTLE_ENDIAN_ORDER
+            word32 key[4];
+            ByteReverseWords(key, aes->key, 16);
+            pKey = (uint8_t*)key;
+#else
+            pKey = (uint8_t*)aes->key;
+#endif
+            if (STATUS_SUCCESS == CSEC_DRV_LoadPlainKey(pKey))
+            {
+                CSEC_DRV_DecryptECB(CSEC_RAM_KEY, (uint8_t*)in, AES_BLOCK_SIZE, out, CSEC_TIMEOUT);
             }
         }
         #endif /* HAVE_AES_DECRYPT */
@@ -2827,7 +2882,15 @@ int wc_AesSetIV(Aes* aes, const byte* iv)
     int wc_AesCbcEncrypt(Aes* aes, byte* out, const byte* in, word32 sz)
     {
         int ret = 0;
-        if (STATUS_SUCCESS != HSM_DRV_LoadPlainKey((uint8_t*)aes->key, HSM_TIMEOUT))
+        uint8_t* pKey;
+#ifdef LITTLE_ENDIAN_ORDER
+        word32 key[4];
+        ByteReverseWords(key, aes->key, 16);
+        pKey = (uint8_t*)key;
+#else
+        pKey = (uint8_t*)aes->key;
+#endif
+        if (STATUS_SUCCESS != HSM_DRV_LoadPlainKey(pKey, HSM_TIMEOUT))
         {
             return WC_TIMEOUT_E;
         }
@@ -2846,8 +2909,15 @@ int wc_AesSetIV(Aes* aes, const byte* iv)
     int wc_AesCbcDecrypt(Aes* aes, byte* out, const byte* in, word32 sz)
     {
         int ret = 0;
-
-        if (STATUS_SUCCESS != HSM_DRV_LoadPlainKey((uint8_t*)aes->key, HSM_TIMEOUT))
+        uint8_t* pKey;
+#ifdef LITTLE_ENDIAN_ORDER
+        word32 key[4];
+        ByteReverseWords(key, aes->key, 16);
+        pKey = (uint8_t*)key;
+#else
+        pKey = (uint8_t*)aes->key;
+#endif
+        if (STATUS_SUCCESS != HSM_DRV_LoadPlainKey(pKey, HSM_TIMEOUT))
         {
             return WC_TIMEOUT_E;
         }
@@ -2860,6 +2930,61 @@ int wc_AesSetIV(Aes* aes, const byte* iv)
         /* store iv for next call */
         XMEMCPY(aes->reg, out + sz - AES_BLOCK_SIZE, AES_BLOCK_SIZE);
 
+        return ret;
+    }
+    #endif /* HAVE_AES_DECRYPT */
+
+#elif defined(NXP_SDK_CSEC)
+
+    int wc_AesCbcEncrypt(Aes* aes, byte* out, const byte* in, word32 sz)
+    {
+        int ret = 0;
+        uint8_t* pKey;
+#ifdef LITTLE_ENDIAN_ORDER
+        word32 key[4];
+        ByteReverseWords(key, aes->key, 16);
+        pKey = (uint8_t*)key;
+#else
+        pKey = (uint8_t*)aes->key;
+#endif
+
+        if (STATUS_SUCCESS != CSEC_DRV_LoadPlainKey(pKey))
+        {
+            return WC_TIMEOUT_E;
+        }
+
+        if (STATUS_SUCCESS != CSEC_DRV_EncryptCBC(CSEC_RAM_KEY, in, sz, (uint8_t*)aes->reg, out, CSEC_TIMEOUT))
+        {
+            ret = WC_TIMEOUT_E;
+        }
+        /* store iv for next call */
+        XMEMCPY(aes->reg, out + sz - AES_BLOCK_SIZE, AES_BLOCK_SIZE);
+        return ret;
+    }
+    #ifdef HAVE_AES_DECRYPT
+    int wc_AesCbcDecrypt(Aes* aes, byte* out, const byte* in, word32 sz)
+    {
+        int ret = 0;
+        uint8_t* pKey;
+#ifdef LITTLE_ENDIAN_ORDER
+        word32 key[4];
+        ByteReverseWords(key, aes->key, 16);
+        pKey = (uint8_t*)key;
+#else
+        pKey = (uint8_t*)aes->key;
+#endif
+
+        if (STATUS_SUCCESS != CSEC_DRV_LoadPlainKey(pKey))
+        {
+            return WC_TIMEOUT_E;
+        }
+
+        if (STATUS_SUCCESS != CSEC_DRV_DecryptCBC(CSEC_RAM_KEY, (uint8_t*)in, sz, (uint8_t*)aes->reg, out, CSEC_TIMEOUT))
+        {
+            ret = WC_TIMEOUT_E;
+        }
+        /* store iv for next call */
+        XMEMCPY(aes->reg, out + sz - AES_BLOCK_SIZE, AES_BLOCK_SIZE);
         return ret;
     }
     #endif /* HAVE_AES_DECRYPT */

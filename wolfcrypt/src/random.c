@@ -117,6 +117,8 @@ int wc_RNG_GenerateByte(WC_RNG* rng, byte* b)
     #include "fsl_rnga.h"
 #elif defined(NXP_SDK_HSM)
     #include "hsm_driver.h"
+#elif defined(NXP_SDK_CSEC)
+    #include "csec_driver.h"
 
 #elif defined(NO_DEV_RANDOM)
 #elif defined(CUSTOM_RAND_GENERATE)
@@ -1653,6 +1655,36 @@ int wc_GenerateSeed(OS_Seed* os, byte* output, word32 sz)
         do
         {
             ret = HSM_DRV_GenerateRND(buf, HSM_TIMEOUT);
+            if (ret != STATUS_SUCCESS)
+            {
+                break;
+            }
+            for(i = 0; (i < sizeof(buf)) && (remaining > 0); i++)
+            {
+                *outp++ = buf[i];
+                remaining--;
+            }
+        }
+        while (remaining > 0);
+
+        return ret;
+    }
+
+#elif defined(NXP_SDK_CSEC)
+
+    int wc_GenerateSeed(OS_Seed* os, byte* output, word32 sz)
+    {
+        int ret = -1;
+        word32 i = 0;
+        word32 remaining = sz;
+        byte* outp = output;
+        uint8_t buf[16];
+
+        (void)os;
+
+        do
+        {
+            ret = CSEC_DRV_GenerateRND(buf);
             if (ret != STATUS_SUCCESS)
             {
                 break;

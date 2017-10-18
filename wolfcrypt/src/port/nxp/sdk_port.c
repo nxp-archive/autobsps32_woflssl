@@ -34,13 +34,22 @@
 static hsm_state_t g_hsm_state;
 #endif /* NXP_SDK_HSM */
 
-#if defined(NXP_SDK_RTC_C55)
+#if defined(NXP_SDK_CSEC)
+#include "csec_driver.h"
+static csec_state_t g_csec_state;
+#endif /* NXP_SDK_CSEC */
+
+#if defined(NXP_SDK_RTC_C55) || defined(NXP_SDK_RTC_S32K)
 #include "lwip/def.h"
+#if defined(NXP_SDK_RTC_C55)
 #include "rtc_c55_driver.h"
-#define RTC_INSTANCE 0U
 static rtc_state_t g_rtc_state;
+#elif defined(NXP_SDK_RTC_S32K)
+#include "rtc_driver.h"
+#endif
+#define RTC_INSTANCE 0U
 static const char month_names[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
-#endif /* NXP_SDK_RTC_C55 */
+#endif /* NXP_SDK_RTC_C55 || NXP_SDK_RTC_S32K */
 
 int nxp_sdk_port_init(void)
 {
@@ -53,10 +62,20 @@ int nxp_sdk_port_init(void)
     DEV_ASSERT(ret == STATUS_SUCCESS);
 #endif /* NXP_SDK_HSM */
 
-#if defined(NXP_SDK_RTC_C55)
+#if defined(NXP_SDK_CSEC)
+    CSEC_DRV_Init(&g_csec_state);
+    ret = CSEC_DRV_InitRNG();
+    DEV_ASSERT(ret == STATUS_SUCCESS);
+#endif /* NXP_SDK_CSEC */
+
+#if defined(NXP_SDK_RTC_C55) || defined(NXP_SDK_RTC_S32K)
     rtc_init_config_t rtcConfig;
     RTC_DRV_GetDefaultConfig(&rtcConfig);
+#if defined(NXP_SDK_RTC_C55)
     RTC_DRV_Init(RTC_INSTANCE, &g_rtc_state, &rtcConfig);
+#elif defined(NXP_SDK_RTC_S32K)
+    RTC_DRV_Init(RTC_INSTANCE, &rtcConfig);
+#endif
 
     /* Initialize Time & Date based on host system's clock at compile time.
        This may need to be initialized more accurately.
@@ -86,12 +105,16 @@ int nxp_sdk_port_init(void)
     return ret;
 }
 
-#if defined(NXP_SDK_RTC_C55)
+#if defined(NXP_SDK_RTC_C55) || defined(NXP_SDK_RTC_S32K)
 uint32_t nxp_sdk_rtc_time(void)
 {
     uint32_t secs;
     rtc_timedate_t crt;
+#if defined(NXP_SDK_RTC_C55)
     RTC_DRV_GetTimeDate(RTC_INSTANCE, &crt);
+#elif defined(NXP_SDK_RTC_S32K)
+    RTC_DRV_GetCurrentTimeDate(RTC_INSTANCE, &crt);
+#endif
     RTC_DRV_ConvertTimeDateToSeconds(&crt, &secs);
     return secs;
 }
@@ -103,9 +126,13 @@ void nxp_sdk_port_cleanup(void)
     HSM_DRV_Deinit();
 #endif /* NXP_SDK_HSM */
 
-#if defined(NXP_SDK_RTC_C55)
+#if defined(NXP_SDK_CSEC)
+    CSEC_DRV_Deinit();
+#endif /* NXP_SDK_CSEC */
+
+#if defined(NXP_SDK_RTC_C55) || defined(NXP_SDK_RTC_S32K)
     RTC_DRV_Deinit(RTC_INSTANCE);
-#endif /* NXP_SDK_RTC_C55 */
+#endif /* NXP_SDK_RTC_C55 || NXP_SDK_RTC_S32K */
 }
 
 #endif /* NXP_SDK */

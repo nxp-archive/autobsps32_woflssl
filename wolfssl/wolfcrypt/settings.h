@@ -91,6 +91,9 @@
 /* Uncomment next line if building for NXP MPC57xx SDK */
 /* #define NXP_SDK_MPC57xx */
 
+/* Uncomment next line if building for NXP S32K148 SDK */
+/* #define NXP_SDK_S32Kxxx */
+
 /* Uncomment next line if using STM32F2 */
 /* #define WOLFSSL_STM32F2 */
 
@@ -987,6 +990,45 @@ extern void uITRON4_free(void *p) ;
     #define NXP_SDK_RTC_C55
 
     #define BIG_ENDIAN_ORDER
+    #define SIZEOF_LONG_LONG 8
+    #define SIZEOF_LONG 4
+    #define NO_WRITEV
+    #define NO_DEV_RANDOM
+
+    #ifdef SINGLE_THREADED
+    #undef SINGLE_THREADED
+    #include "semphr.h"
+    #endif
+
+    #define AES_MAX_KEY_SIZE    128
+
+#endif
+
+
+#ifdef NXP_SDK_S32Kxxx
+    #ifndef FREERTOS
+    #error FREERTOS is required for NXP_SDK_S32Kxxx
+    #endif
+
+    #ifndef NO_FILESYSTEM
+    #error NO_FILESYSTEM is required for NXP_SDK_S32Kxxx
+    #endif
+
+    #ifndef NXP_SDK
+    #define NXP_SDK
+    #endif
+
+    #ifndef WOLFSSL_LWIP
+    #define WOLFSSL_LWIP
+    #endif
+
+    #define WOLFSSL_GENERAL_ALIGNMENT  4
+
+    #define NXP_SDK_CSEC
+    #define CSEC_TIMEOUT 100
+    #define NXP_SDK_RTC_S32K
+
+    #define LITTLE_ENDIAN_ORDER
     #define SIZEOF_LONG_LONG 8
     #define SIZEOF_LONG 4
     #define NO_WRITEV
