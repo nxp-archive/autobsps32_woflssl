@@ -31,6 +31,10 @@
 
 #include <wolfssl/wolfcrypt/misc.h>
 
+#if defined(NXP_SDK)
+#include "device_registers.h"
+#endif
+
 /* inlining these functions is a huge speed increase and a small size decrease,
    because the functions are smaller than function call setup/cleanup, e.g.,
    md5 benchmark is twice as fast with inline.  If you don't want it, then
